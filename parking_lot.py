@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from fastapi import FastAPI, Request
 
 from starlette.responses import JSONResponse
-
+from dateutil import parser
 
 app = FastAPI()
 
@@ -16,6 +16,7 @@ PARKED_CARS = {
     '730d97b3-dfc7-4205-acee-811f57265bf1': {'tariff': 'daily', 'location': 14, 'start': '2022-06-25T17:23:24.428268', 'end': None, 'fee': None}
 }
 PARKING_LOT_CAPACITY = 14
+ACCEPTED_TIME_DELAY = 900
 
 
 class TariffName(str, Enum):
@@ -35,11 +36,15 @@ class LocationNotAvailableException(Exception):
     def __init__(self, location):
         self.location = location
 
+class StartDateException(Exception):
+    def __init__(self, start):
+        self.start = start
+
 
 class ParkedCar(BaseModel):
     car_id: UUID
     status: str
-    tariff: str
+    tariff: TariffName
     location: int
     start: datetime
     end: datetime | None = None
@@ -52,6 +57,10 @@ async def invalid_location_exception_handler(request: Request, exception: Invali
 @app.exception_handler(LocationNotAvailableException)
 async def location_not_available_exception_handler(request: Request, exception: LocationNotAvailableException):
     return JSONResponse(status_code=422, content={"message": f"Cannot park your car there because location {exception.location} is not available!"})
+
+@app.exception_handler(StartDateException)
+async def start_date_in_the_future(request: Request, exception: StartDateException):
+    return JSONResponse(status_code=422, content={"message": f"Cannot part your car because date {exception.start} is invalid!"})
 
 
 @app.get("/cars/")
@@ -72,6 +81,15 @@ async def add_car(parked_car: ParkedCar):
     if parked_car.location in [x.get('location') for x in PARKED_CARS.values()]:
         raise LocationNotAvailableException(location=parked_car.location)
 
+    start_date = parked_car.start.replace(tzinfo=None)
+    present = datetime.now()
+
+    # print(f'{start_date=}')
+    # print(f'{present=}')
+    # print((present - start_date).total_seconds())
+
+    if (present - start_date).total_seconds() > ACCEPTED_TIME_DELAY:
+        raise StartDateException(start=parked_car.start)
 
     car_id = uuid4()
     PARKED_CARS[car_id] = {'status': 'success', 'tariff': parked_car.tariff, 'location': parked_car.location, 'start': parked_car.start, 'end': None, 'fee': None}
