@@ -6,6 +6,8 @@ from fastapi import FastAPI, Request, status
 
 from starlette.responses import JSONResponse
 
+import math
+
 app = FastAPI()
 
 PARKED_CARS = {
@@ -14,6 +16,7 @@ PARKED_CARS = {
 }
 PARKING_LOT_CAPACITY = 14
 ACCEPTED_TIME_DELAY = 900
+FREE_PARKING_TIME = 900
 
 
 class TariffName(str, Enum):
@@ -21,9 +24,9 @@ class TariffName(str, Enum):
     daily = "daily"
 
 
-class Tariffs(str, Enum):
-    hourly = 1
-    daily = 8
+class Tariffs(int, Enum):
+    hourly = 2.5
+    daily = 21
 
 
 class InvalidLocationException(Exception):
@@ -63,10 +66,26 @@ class ParkedCar(BaseModel):
     fee: float | None = Field(default=None, ge=0, description=f"The fee must be greater or equal to 0.")
 
     @validator('location')
-    def location_must_be_greater_than_zero(cls, v):
+    def location_must_be_greater_than_zero(cls, v) -> int:
         if v < 0:
             raise ValueError('must be greater than zero')
         return v
+
+    def get_exit_fee(self, start, end) -> float:
+        start_date = start.replace(tzinfo=None)
+        time_spent_when_parked = (end - start_date).total_seconds()
+
+        if time_spent_when_parked > FREE_PARKING_TIME:
+            exit_fee = math.ceil(time_spent_when_parked/3600) * Tariffs.hourly
+        else:
+            exit_fee = 0
+
+        print(f'{start_date=}')
+        print(f'{end=}')
+        print(f'{time_spent_when_parked=}')
+        print(f'{exit_fee=}')
+
+        return exit_fee
 
 
 @app.exception_handler(InvalidLocationException)
@@ -125,10 +144,11 @@ async def add_car(parked_car: ParkedCar):
     return PARKED_CARS[parked_car.car_id]
 
 
-@app.put("/cars/{car_id}",  status_code=status.HTTP_200_OK)
+@app.put("/cars/{car_id}", status_code=status.HTTP_200_OK)
 async def remove_car(car_id: str, parked_car: ParkedCar):
     if car_id not in PARKED_CARS.keys():
         raise CarIdDoesNotExistException(car_id=car_id)
 
-    PARKED_CARS[car_id] = {'status': 'success', 'tariff': parked_car.tariff, 'location': parked_car.location, 'start': parked_car.start, 'end': datetime.now(), 'fee': 10}
+    PARKED_CARS[car_id] = {'status': 'success', 'tariff': parked_car.tariff, 'location': parked_car.location, 'start': parked_car.start, 'end': datetime.now(),
+                           'fee': parked_car.get_exit_fee(start=parked_car.start, end=datetime.now())}
     return PARKED_CARS[car_id]
