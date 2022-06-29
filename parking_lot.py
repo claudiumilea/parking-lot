@@ -3,9 +3,7 @@ from typing import Optional, Union
 from enum import Enum
 from pydantic import BaseModel, Field, ValidationError, validator
 from fastapi import FastAPI, Request, status
-
 from starlette.responses import JSONResponse
-
 import math
 import dateutil.parser
 
