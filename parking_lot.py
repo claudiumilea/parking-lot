@@ -7,6 +7,7 @@ from fastapi import FastAPI, Request, status
 from starlette.responses import JSONResponse
 
 import math
+import dateutil.parser
 
 app = FastAPI()
 
@@ -17,6 +18,10 @@ PARKED_CARS = {
 PARKING_LOT_CAPACITY = 14
 ACCEPTED_TIME_DELAY = 900
 FREE_PARKING_TIME = 900
+HOURLY_TARIFF = 2.5
+DAILY_TARIFF = 10
+SECONDS_IN_HOUR = 3600
+SECONDS_IN_DAY = 86400
 
 
 class TariffName(str, Enum):
@@ -25,8 +30,8 @@ class TariffName(str, Enum):
 
 
 class Tariffs(int, Enum):
-    hourly = 2.5
-    daily = 21
+    hourly = HOURLY_TARIFF
+    daily = DAILY_TARIFF
 
 
 class InvalidLocationException(Exception):
@@ -71,21 +76,21 @@ class ParkedCar(BaseModel):
             raise ValueError('must be greater than zero')
         return v
 
-    def get_exit_fee(self, start, end) -> float:
+    def get_exit_fee(self, start: datetime, end: datetime, tariff: float) -> float:
         start_date = start.replace(tzinfo=None)
         time_spent_when_parked = (end - start_date).total_seconds()
 
-        if time_spent_when_parked > FREE_PARKING_TIME:
-            exit_fee = math.ceil(time_spent_when_parked/3600) * Tariffs.hourly
+        if time_spent_when_parked < FREE_PARKING_TIME:
+            return 0
         else:
-            exit_fee = 0
 
-        print(f'{start_date=}')
-        print(f'{end=}')
-        print(f'{time_spent_when_parked=}')
-        print(f'{exit_fee=}')
-
-        return exit_fee
+            match tariff:
+                case TariffName.hourly:
+                    exit_fee = math.ceil(time_spent_when_parked / SECONDS_IN_HOUR) * Tariffs.hourly
+                    return exit_fee
+                case TariffName.daily:
+                    exit_fee = math.ceil(time_spent_when_parked / SECONDS_IN_DAY) * Tariffs.daily
+                    return exit_fee
 
 
 @app.exception_handler(InvalidLocationException)
@@ -140,7 +145,7 @@ async def add_car(parked_car: ParkedCar):
     if parked_car.car_id in PARKED_CARS.keys():
         raise CarIdExistsException(car_id=parked_car.car_id)
 
-    PARKED_CARS[parked_car.car_id] = {'status': 'success', 'tariff': parked_car.tariff, 'location': parked_car.location, 'start': parked_car.start, 'end': None, 'fee': None}
+    PARKED_CARS[parked_car.car_id] = {'tariff': parked_car.tariff, 'location': parked_car.location, 'start': parked_car.start, 'end': None, 'fee': None}
     return PARKED_CARS[parked_car.car_id]
 
 
@@ -148,7 +153,10 @@ async def add_car(parked_car: ParkedCar):
 async def remove_car(car_id: str, parked_car: ParkedCar):
     if car_id not in PARKED_CARS.keys():
         raise CarIdDoesNotExistException(car_id=car_id)
+    tariff = PARKED_CARS[car_id].get('tariff')
+    start = dateutil.parser.isoparse(PARKED_CARS[car_id].get('start'))
+    print(f'{start=}')
 
-    PARKED_CARS[car_id] = {'status': 'success', 'tariff': parked_car.tariff, 'location': parked_car.location, 'start': parked_car.start, 'end': datetime.now(),
-                           'fee': parked_car.get_exit_fee(start=parked_car.start, end=datetime.now())}
+    PARKED_CARS[car_id] = {'tariff': tariff, 'location': parked_car.location, 'start': start, 'end': datetime.now(),
+                           'fee': parked_car.get_exit_fee(start=start, end=datetime.now(), tariff=tariff)}
     return PARKED_CARS[car_id]
