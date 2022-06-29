@@ -162,6 +162,7 @@ async def add_car(parked_car: ParkedCar):
 async def remove_car(car_id: str, parked_car: ParkedCar):
     if car_id not in PARKED_CARS.keys():
         raise CarIdDoesNotExistException(car_id=car_id)
+
     if PARKED_CARS[car_id].get('status') == 'removed':
         raise CarAlreadyRemovedException(car_id=car_id)
 
