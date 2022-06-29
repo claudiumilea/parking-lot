@@ -1,0 +1,258 @@
+{
+	"info": {
+		"_postman_id": "b9499048-c754-48a4-9c73-4067be25ead3",
+		"name": "parking lot",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "9258448"
+	},
+	"item": [
+		{
+			"name": "add car",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"var moment = require('moment');",
+							"pm.globals.set(\"start\", moment().format());"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"car_id\":\"X777Y777\",\n    \"tariff\": \"hourly\",\n    \"location\":\"10\",\n    \"start\":\"{{start}}\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "127.0.0.1:8000/cars/",
+					"host": [
+						"127",
+						"0",
+						"0",
+						"1"
+					],
+					"port": "8000",
+					"path": [
+						"cars",
+						""
+					],
+					"query": [
+						{
+							"key": "tariff",
+							"value": "hourly",
+							"disabled": true
+						},
+						{
+							"key": "location",
+							"value": "1",
+							"disabled": true
+						},
+						{
+							"key": "start",
+							"value": "{{$timestamp}}",
+							"disabled": true
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "remove hourly car",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"var moment = require('moment');",
+							"pm.globals.set(\"end\", moment().format());",
+							"var start = pm.globals.get(\"start\")"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "PUT",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"location\":0\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "127.0.0.1:8000/cars/X773HY97",
+					"host": [
+						"127",
+						"0",
+						"0",
+						"1"
+					],
+					"port": "8000",
+					"path": [
+						"cars",
+						"X773HY97"
+					],
+					"query": [
+						{
+							"key": "tariff",
+							"value": "hourly",
+							"disabled": true
+						},
+						{
+							"key": "location",
+							"value": "1",
+							"disabled": true
+						},
+						{
+							"key": "start",
+							"value": "{{$timestamp}}",
+							"disabled": true
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "remove daily car",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"var moment = require('moment');",
+							"pm.globals.set(\"end\", moment().format());",
+							"var start = pm.globals.get(\"start\")"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "PUT",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"location\":0\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "127.0.0.1:8000/cars/G737TT97",
+					"host": [
+						"127",
+						"0",
+						"0",
+						"1"
+					],
+					"port": "8000",
+					"path": [
+						"cars",
+						"G737TT97"
+					],
+					"query": [
+						{
+							"key": "tariff",
+							"value": "hourly",
+							"disabled": true
+						},
+						{
+							"key": "location",
+							"value": "1",
+							"disabled": true
+						},
+						{
+							"key": "start",
+							"value": "{{$timestamp}}",
+							"disabled": true
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "get all cars",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "127.0.0.1:8000/cars/",
+					"host": [
+						"127",
+						"0",
+						"0",
+						"1"
+					],
+					"port": "8000",
+					"path": [
+						"cars",
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "get car",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "127.0.0.1:8000/cars/X773HY97",
+					"host": [
+						"127",
+						"0",
+						"0",
+						"1"
+					],
+					"port": "8000",
+					"path": [
+						"cars",
+						"X773HY97"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
