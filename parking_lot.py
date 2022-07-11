@@ -6,6 +6,7 @@ from fastapi import FastAPI, Request, status
 from starlette.responses import JSONResponse
 import math
 import dateutil.parser
+import re
 
 app = FastAPI()
 
@@ -61,6 +62,15 @@ class CarIdDoesNotExistException(Exception):
     def __init__(self, car_id):
         self.car_id = car_id
 
+class CarIdPatternException(Exception):
+    def __init__(self, car_id):
+        self.car_id = car_id
+
+class CarIdNullException(Exception):
+    def __init__(self, car_id):
+        self.car_id = car_id
+
+
 
 class ParkedCar(BaseModel):
     car_id: str = Field(
@@ -74,10 +84,10 @@ class ParkedCar(BaseModel):
     fee: float | None = Field(default=None, ge=0, description=f"The fee must be greater or equal to 0.")
 
     @validator('location')
-    def location_must_be_greater_than_zero(cls, v) -> int:
-        if v < 0:
+    def location_must_be_greater_than_zero(cls, location_value) -> int:
+        if location_value < 0:
             raise ValueError('must be greater than zero')
-        return v
+        return location_value
 
     def get_exit_fee(self, start: datetime, end: datetime, tariff: float) -> float:
         start_date = start.replace(tzinfo=None)
@@ -119,11 +129,18 @@ async def car_id_already_exists(exception: CarIdExistsException):
 async def car_id_does_not_exist(exception: CarIdDoesNotExistException):
     return JSONResponse(status_code=422, content={"status": "error", "message": f"Car {exception.car_id} is not in the parking lot!!"})
 
+@app.exception_handler(CarIdNullException)
+async def car_id_null_exist(exception: CarIdNullException):
+    return JSONResponse(status_code=422, content={"status": "error", "message": f"Car {exception.car_id} is invalid. Car plate cannot be null!!"})
+
 
 @app.exception_handler(CarAlreadyRemovedException)
 async def car_id_already_removed(exception: CarAlreadyRemovedException):
     return JSONResponse(status_code=422, content={"status": "error", "message": f"Car {exception.car_id} already removed!"})
 
+@app.exception_handler(CarIdPatternException)
+async def car_id_invalid_pattern(exception: CarIdPatternException):
+    return JSONResponse(status_code=422, content={"status": "error", "message": f"Car {exception.car_id} is invalid!"})
 
 @app.get("/cars/")
 async def get_cars():
@@ -137,6 +154,9 @@ async def get_car(car_id: Optional[str] = None):
 
 @app.post("/cars/", status_code=status.HTTP_201_CREATED)
 async def add_car(parked_car: ParkedCar):
+    if parked_car.car_id is None:
+        raise CarIdNullException(car_id=parked_car.car_id)
+
     if parked_car.location <= 0 or parked_car.location > PARKING_LOT_CAPACITY:
         raise InvalidLocationException(location=parked_car.location)
 
@@ -151,6 +171,10 @@ async def add_car(parked_car: ParkedCar):
 
     if parked_car.car_id in PARKED_CARS.keys():
         raise CarIdExistsException(car_id=parked_car.car_id)
+
+    car_plate_pattern = re.compile(r"[A-Za-z0-9]+")
+    if not re.fullmatch(car_plate_pattern, parked_car.car_id):
+        raise CarIdPatternException(car_id=parked_car.car_id)
 
     PARKED_CARS[parked_car.car_id] = {'status': 'parked', 'tariff': parked_car.tariff, 'location': parked_car.location, 'start': parked_car.start, 'end': None, 'fee': None}
     return PARKED_CARS[parked_car.car_id]
