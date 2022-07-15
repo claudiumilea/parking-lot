@@ -107,7 +107,7 @@ class ParkedCar(BaseModel):
 
 @app.exception_handler(InvalidLocationException)
 async def invalid_location_exception_handler(exception: InvalidLocationException):
-    return JSONResponse(status_code=422, content={"status": "error", "message": f"Cannot park your car there because location {exception.location} is invalid!"})
+    return JSONResponse(status_code=422, content={"status": "error", "message": f"Cannot park your car there because location {exception.location} does not exist!"})
 
 
 @app.exception_handler(LocationNotAvailableException)
@@ -191,6 +191,6 @@ async def remove_car(car_id: str, parked_car: ParkedCar):
     tariff = PARKED_CARS[car_id].get('tariff')
     start = dateutil.parser.isoparse(PARKED_CARS[car_id].get('start'))
 
-    PARKED_CARS[car_id] = {'status': 'removed', 'tariff': tariff, 'location': parked_car.location, 'start': start, 'end': datetime.now(),
+    PARKED_CARS[car_id] = {'status': 'removed', 'tariff': tariff, 'location': '', 'start': start, 'end': datetime.now(),
                            'fee': parked_car.get_exit_fee(start=start, end=datetime.now(), tariff=tariff)}
     return PARKED_CARS[car_id]
