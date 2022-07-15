@@ -166,7 +166,12 @@ async def add_car(parked_car: ParkedCar):
     start_date = parked_car.start.replace(tzinfo=None)
     present = datetime.now()
 
-    if (present - start_date).total_seconds() > ACCEPTED_TIME_DELAY:
+    """
+        In case the difference between the chosen date and the actual time is more
+        than the accepted time delay - by default 15 minutes - an error would be raised.
+        This is to prevent fraud or other mistakes that would decrease the fee unfairly.
+    """
+    if (start_date - present).total_seconds() > ACCEPTED_TIME_DELAY:
         raise StartDateException(start=parked_car.start)
 
     if parked_car.car_id in PARKED_CARS.keys():
